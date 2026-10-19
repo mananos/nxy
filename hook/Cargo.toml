@@ -1,0 +1,11 @@
+[package]
+name = "ascua-hook"
+version = "0.1.0"
+description = "Claude Code hook that hands permission requests to Ascua"
+license = "Apache-2.0"
+edition = "2024"
+
+[dependencies]
+ascua-ipc = { path = "../ipc" }
+interprocess = "2"
+serde_json = "1"

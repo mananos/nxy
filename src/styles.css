@@ -1,0 +1,122 @@
+:root {
+  --panel: rgba(28, 28, 32, 0.94);
+  --text: #f2f0ec;
+  --allow: #3fae6a;
+  --deny: #d6554d;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font: 13px/1.4 "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+  user-select: none;
+}
+
+body {
+  position: relative;
+}
+
+#ascua-host {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 120px;
+  height: 120px;
+  cursor: grab;
+}
+
+body[data-x="left"] #ascua-host { left: 0; right: auto; }
+body[data-y="top"] #ascua-host { top: 0; bottom: auto; }
+
+#bubble {
+  position: absolute;
+  right: 32px;
+  bottom: 126px;
+  width: 360px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  background: var(--panel);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+#bubble::after {
+  content: "";
+  position: absolute;
+  right: 28px;
+  bottom: -8px;
+  border: 8px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--panel);
+}
+
+body[data-x="left"] #bubble { left: 32px; right: auto; }
+body[data-x="left"] #bubble::after { left: 28px; right: auto; }
+body[data-y="top"] #bubble { top: 126px; bottom: auto; }
+body[data-y="top"] #bubble::after {
+  top: -8px;
+  bottom: auto;
+  border-top: 0;
+  border-bottom: 8px solid var(--panel);
+}
+
+#bubble header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+#face {
+  display: inline-block;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 60%, #2a2a36, #14141b);
+}
+
+#queued { margin-left: auto; }
+
+#queued { opacity: 0.6; font-weight: 400; }
+
+#summary {
+  margin: 8px 0 12px;
+  max-height: 3.6em;
+  overflow: hidden;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font: 12px/1.5 Consolas, "Cascadia Mono", monospace;
+  opacity: 0.9;
+}
+
+#bubble footer {
+  display: flex;
+  gap: 8px;
+}
+
+button {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+}
+
+button.allow { background: var(--allow); }
+button.deny { background: var(--deny); }
+button.quiet {
+  margin-left: auto;
+  background: transparent;
+  color: var(--text);
+  opacity: 0.6;
+  font-weight: 400;
+}
+
+button:hover { filter: brightness(1.12); }

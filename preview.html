@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en" data-theme="coral">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ascua preview</title>
+    <style>
+      body { margin: 0; height: 100vh; background: #0d0d12; color: #f5f5f7; font: 14px system-ui, sans-serif; overflow: hidden; }
+      nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px; }
+      button { padding: 8px 14px; border: 1px solid #8b5cf6; border-radius: 8px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+      button:hover { background: #8b5cf633; }
+      p { margin: 0; padding: 0 16px; opacity: 0.6; }
+      #host { position: absolute; left: 0; bottom: 40px; width: 120px; height: 120px; cursor: pointer; }
+      #fps { position: fixed; top: 8px; right: 12px; font: 12px ui-monospace, monospace; opacity: 0.8; }
+      #ground { position: absolute; left: 0; right: 0; bottom: 40px; border-top: 1px solid #2a2a33; }
+    </style>
+    <script type="module">
+      import { mountAscua, MOUTH } from "/src/ascua.ts";
+      import { live } from "/src/life.ts";
+
+      const host = document.querySelector("#host");
+      const ascua = mountAscua(host, "preview");
+      const life = live(ascua);
+
+      host.addEventListener("click", () => life.poke());
+      const actions = {
+        alert: () => life.need("alert"),
+        warn: () => life.need("warn"),
+        ask: () => life.need("ask"),
+        approve: () => life.celebrate(),
+        release: () => life.release(),
+      };
+      document.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => actions[b.dataset.do]()));
+
+      const actsNav = document.querySelector("#acts");
+      for (const act of Object.keys(MOUTH)) {
+        const b = document.createElement("button");
+        b.textContent = act;
+        b.addEventListener("click", () => ascua.play(act));
+        actsNav.append(b);
+      }
+
+      const fps = document.querySelector("#fps");
+      let frames = 0, worst = 0, last = performance.now(), mark = last;
+      const tick = (now) => {
+        frames++;
+        worst = Math.max(worst, now - last);
+        last = now;
+        if (now - mark >= 1000) {
+          fps.textContent = `${Math.round((frames * 1000) / (now - mark))} fps · worst ${worst.toFixed(1)} ms`;
+          frames = 0; worst = 0; mark = now;
+        }
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    </script>
+  </head>
+  <body>
+    <nav>
+      <button data-do="alert">Permission request</button>
+      <button data-do="warn">Destructive command</button>
+      <button data-do="ask">Question</button>
+      <button data-do="approve">Approve</button>
+      <button data-do="release">Reject / back to life</button>
+    </nav>
+    <nav id="acts"></nav>
+    <div id="fps"></div>
+    <p>Ascua lives on its own: floats, dances, stretches, and naps after ~50 s of nothing. Click it to wave or wake it up.</p>
+    <div id="ground"></div>
+    <div id="host"></div>
+  </body>
+</html>

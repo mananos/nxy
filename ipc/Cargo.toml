@@ -1,0 +1,9 @@
+[package]
+name = "ascua-ipc"
+version = "0.1.0"
+description = "Local socket endpoint shared by the Ascua app and its Claude Code hook"
+license = "Apache-2.0"
+edition = "2024"
+
+[dependencies]
+interprocess = "2"

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" data-theme="coral">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ascua</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.ts" defer></script>
+  </head>
+
+  <body>
+    <section id="bubble" hidden>
+      <header>
+        <span id="face"></span>
+        <span id="tool"></span>
+        <span id="queued"></span>
+      </header>
+      <pre id="summary"></pre>
+      <footer>
+        <button data-decision="allow" class="allow">Approve</button>
+        <button data-decision="deny" class="deny">Reject</button>
+        <button data-decision="terminal" class="quiet">In terminal</button>
+      </footer>
+    </section>
+
+    <div id="ascua-host"></div>
+  </body>
+</html>
