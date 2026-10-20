@@ -12,19 +12,30 @@ export interface Room {
   isOpen(): boolean;
 }
 
-interface Expanded {
-  originX: number;
-  originY: number;
+interface Insets {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }
+
+interface Staged {
+  ghostX: number;
+  ghostY: number;
+  stageW: number;
+  stageH: number;
+  room: Insets;
+}
+
+// Compact ghost window size; must match perch.rs and tauri.conf.json.
+const COMPACT = { w: 420, h: 320 };
 
 const GLYPH_MAX = "□";
 const GLYPH_RESTORE = "❐";
 
 const GHOST = 120;
-const MS = 420;
-const FADE_MS = 120;
-const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
-const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+const spd = () =>
+  parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--spd")) || 1;
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -35,9 +46,6 @@ export function mountRoom(el: HTMLElement, ghostHost: HTMLElement, ascua: Ascua)
   const win = getCurrentWindow();
   let state: State = "ghost";
   let expanding: Promise<void> = Promise.resolve();
-
-  let origin = { x: 0, y: 0 };
-  let openSize = { w: 0, h: 0 };
 
   function setMax(max: boolean) {
     if (max) document.body.dataset.max = "1";
@@ -56,38 +64,89 @@ export function mountRoom(el: HTMLElement, ghostHost: HTMLElement, ascua: Ascua)
   }
   win.onResized(syncMax).catch(() => {});
 
-  // Grow (forward) or shrink (reverse) the panel out of / into the ghost's spot.
-  async function animate(forward: boolean) {
-    const duration = reduced.matches ? 0 : MS;
-    const cx = origin.x + GHOST / 2;
-    const cy = origin.y + GHOST / 2;
-    el.style.transformOrigin = `${cx}px ${cy}px`;
-    ghostHost.style.cssText = `left:${origin.x}px;top:${origin.y}px;right:auto;bottom:auto`;
-    const options: KeyframeAnimationOptions = {
-      duration,
-      easing: EASE,
-      fill: "both",
-      direction: forward ? "normal" : "reverse",
-    };
-    const panel = el.animate(
-      [
-        { transform: `scale(${GHOST / el.offsetWidth}, ${GHOST / el.offsetHeight})`, opacity: 0.5 },
-        { transform: "none", opacity: 1 },
-      ],
-      options,
-    );
-    const ghost = ghostHost.animate(
-      [
-        { transform: "none", opacity: 1 },
-        { transform: `translate(${el.offsetWidth / 2 - cx}px, ${el.offsetHeight / 2 - cy}px) scale(1.8)`, opacity: 0 },
-      ],
-      options,
-    );
-    await Promise.all([panel.finished, ghost.finished]);
-    return () => {
-      panel.cancel();
-      ghost.cancel();
-    };
+  // Park the ghost at (x, y) and point the room's closed clip at that spot.
+  function place(x: number, y: number, stageW: number, stageH: number) {
+    const s = document.body.style;
+    s.setProperty("--gl", `${x}px`);
+    s.setProperty("--gt", `${y}px`);
+    s.setProperty("--gr", `${stageW - x - GHOST}px`);
+    s.setProperty("--gb", `${stageH - y - GHOST}px`);
+    ghostHost.style.cssText = `left:${x}px;top:${y}px;right:auto;bottom:auto`;
+  }
+
+  function setRoom(r: Insets | null) {
+    const s = document.body.style;
+    const vars: [string, keyof Insets][] = [
+      ["--rl", "left"],
+      ["--rt", "top"],
+      ["--rr", "right"],
+      ["--rb", "bottom"],
+    ];
+    for (const [v, k] of vars) {
+      if (r) s.setProperty(v, `${r[k]}px`);
+      else s.removeProperty(v);
+    }
+  }
+
+  // Run fn with transitions off, committing its style changes before they come back on.
+  function snap(fn: () => void) {
+    document.body.dataset.snap = "1";
+    try {
+      fn();
+      void el.offsetWidth;
+    } finally {
+      delete document.body.dataset.snap;
+    }
+  }
+
+  // Run apply synchronously in the first resize event that reaches w x h (so the first
+  // frame painted at that size is already right), right away if already there, or on timeout.
+  // The returned promise has a cancel(): disarms without applying (use when the window
+  // change it was waiting for failed).
+  function onViewport(
+    w: number,
+    h: number,
+    apply: () => void,
+    timeoutMs = 300,
+  ): Promise<void> & { cancel: () => void } {
+    const match = () =>
+      Math.abs(window.innerWidth - w) <= 1 && Math.abs(window.innerHeight - h) <= 1;
+    let cancel = () => {};
+    let promise: Promise<void>;
+    if (match()) {
+      apply();
+      promise = Promise.resolve();
+    } else {
+      promise = new Promise<void>((resolve) => {
+        let timer = 0;
+        const disarm = () => {
+          window.removeEventListener("resize", onResize);
+          clearTimeout(timer);
+        };
+        const done = () => {
+          disarm();
+          try {
+            apply();
+          } finally {
+            resolve();
+          }
+        };
+        const onResize = () => {
+          if (match()) done();
+        };
+        cancel = () => {
+          disarm();
+          resolve();
+        };
+        window.addEventListener("resize", onResize);
+        timer = window.setTimeout(done, timeoutMs);
+      });
+    }
+    return Object.assign(promise, { cancel: () => cancel() });
+  }
+
+  function clearPlace() {
+    for (const v of ["--gl", "--gt", "--gr", "--gb"]) document.body.style.removeProperty(v);
   }
 
   async function expand() {
@@ -96,14 +155,39 @@ export function mountRoom(el: HTMLElement, ghostHost: HTMLElement, ascua: Ascua)
     expanding = (async () => {
       let ok = false;
       try {
-        const r = await invoke<Expanded>("expand");
-        origin = { x: r.originX, y: r.originY };
-        el.hidden = false;
-        const cleanup = await animate(true);
-        ascua.pause(true);
+        const s = await invoke<Staged>("expand");
+        const p = onViewport(s.stageW, s.stageH, () =>
+          snap(() => {
+            place(s.ghostX, s.ghostY, s.stageW, s.stageH);
+            setRoom(s.room);
+            el.hidden = false;
+          }),
+        );
+        try {
+          await invoke("stage");
+        } catch (e) {
+          p.cancel();
+          throw e;
+        }
+        await p;
+        void el.offsetWidth; // commit the closed clip before opening
+        document.body.dataset.room = "waking";
+        await sleep(260 * spd());
         document.body.dataset.room = "open";
-        cleanup();
-        openSize = { w: el.offsetWidth, h: el.offsetHeight };
+        await sleep(700 * spd());
+        const q = onViewport(
+          s.stageW - s.room.left - s.room.right,
+          s.stageH - s.room.top - s.room.bottom,
+          () => snap(() => setRoom(null)),
+        );
+        try {
+          await invoke("settle");
+        } catch (e) {
+          q.cancel();
+          throw e;
+        }
+        await q;
+        ascua.pause(true);
         syncMax();
         ok = true;
       } catch {
@@ -115,6 +199,8 @@ export function mountRoom(el: HTMLElement, ghostHost: HTMLElement, ascua: Ascua)
           el.hidden = true;
           delete document.body.dataset.room;
           ascua.pause(false);
+          clearPlace();
+          setRoom(null);
           state = "ghost";
           try {
             applyLayout(await invoke<Layout>("collapse"));
@@ -136,28 +222,46 @@ export function mountRoom(el: HTMLElement, ghostHost: HTMLElement, ascua: Ascua)
       if (state === "expanding") await expanding;
       if (state !== "open") return;
       state = "collapsing";
-      let cleanup = () => {};
       try {
-        document.body.dataset.room = "closing";
-        if (!reduced.matches) await sleep(FADE_MS);
         ascua.pause(false);
-        // The shrink targets the ghost's original spot; once the window was
-        // resized or maximized that spot is stale, so the fade alone has to do.
-        const stale =
-          document.body.dataset.max === "1" ||
-          el.offsetWidth !== openSize.w ||
-          el.offsetHeight !== openSize.h;
-        const running = stale ? undefined : animate(false);
-        delete document.body.dataset.room;
-        if (running) cleanup = await running;
-        el.hidden = true;
-        applyLayout(await invoke<Layout>("collapse"));
+        const m = await invoke<Staged>("measure");
+        const p = onViewport(m.stageW, m.stageH, () =>
+          snap(() => {
+            setRoom(m.room);
+            place(m.ghostX, m.ghostY, m.stageW, m.stageH);
+            setMax(false);
+          }),
+        );
+        try {
+          await invoke("stage");
+        } catch (e) {
+          p.cancel();
+          throw e;
+        }
+        await p;
+        document.body.dataset.room = "closing";
+        await sleep(900 * spd());
+        const q = onViewport(COMPACT.w, COMPACT.h, () => {
+          el.hidden = true;
+          delete document.body.dataset.room;
+          ghostHost.style.cssText = "";
+          clearPlace();
+          setRoom(null);
+        });
+        try {
+          applyLayout(await invoke<Layout>("collapse"));
+        } catch (e) {
+          q.cancel();
+          throw e;
+        }
+        await q;
       } finally {
         el.hidden = true;
         delete document.body.dataset.room;
         ascua.pause(false);
         ghostHost.style.cssText = "";
-        cleanup();
+        clearPlace();
+        setRoom(null);
         setMax(false);
         state = "ghost";
         collapsing = undefined;

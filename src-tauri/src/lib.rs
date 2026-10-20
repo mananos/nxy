@@ -13,6 +13,9 @@ pub fn run() {
             perch::drag,
             perch::layout,
             perch::expand,
+            perch::stage,
+            perch::settle,
+            perch::measure,
             perch::collapse,
             perch::toggle_maximize
         ])

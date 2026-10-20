@@ -46,7 +46,18 @@ pub struct Perch {
     expanded: AtomicBool,
     /// The ghost's screen spot (physical px) from when the window expanded.
     spot: Mutex<Option<PhysicalPosition<i32>>>,
+    /// Geometry of the expand morph; set while expanded.
+    stage: Mutex<Option<Stage>>,
     clickable: AtomicBool,
+}
+
+/// Physical px: the ghost monitor's work area (left, top, right, bottom), its scale
+/// factor and the centered room rect (position, size).
+#[derive(Clone, Copy)]
+struct Stage {
+    area: (i32, i32, i32, i32),
+    scale: f64,
+    target: ((i32, i32), (i32, i32)),
 }
 
 /// Ascua's screen top-left and side, plus the window's bounds, all in physical px.
@@ -285,15 +296,6 @@ fn centered(area: (i32, i32, i32, i32), ratio: f64, min: (i32, i32)) -> ((i32, i
     ((area.0 + (aw - w) / 2, area.1 + (ah - h) / 2), (w, h))
 }
 
-/// The ghost's top-left relative to the window's top-left, clamped so the ghost's
-/// `side` square lies inside the window.
-fn origin_in(spot: (i32, i32), win_pos: (i32, i32), win: (i32, i32), side: i32) -> (i32, i32) {
-    (
-        (spot.0 - win_pos.0).min(win.0 - side).max(0),
-        (spot.1 - win_pos.1).min(win.1 - side).max(0),
-    )
-}
-
 /// A bubble re-places the window only while collapsed.
 fn replaces_for_bubble(bubble: bool, expanded: bool) -> bool {
     bubble && !expanded
@@ -374,19 +376,18 @@ mod tests {
     }
 
     #[test]
-    fn ghost_stays_inside_centered_window_in_every_corner() {
-        let (pos, size) = centered(AREA, 0.7, (900, 600));
-        assert_eq!((pos, size), ((50, 100), (900, 600)));
-        let side = 120;
-        // Ghost in each corner of the work area, plus one inside the window.
-        for spot in [(0, 0), (880, 0), (0, 680), (880, 680), (500, 400)] {
-            let (ox, oy) = origin_in(spot, pos, size, side);
-            assert!((0..=size.0 - side).contains(&ox), "{spot:?} -> {ox}");
-            assert!((0..=size.1 - side).contains(&oy), "{spot:?} -> {oy}");
+    fn ghost_keeps_its_spot_in_the_stage() {
+        let area = (100, 50, 2100, 1050);
+        let (pos, size) = centered(area, 0.7, (900, 600));
+        for (spot, want) in [
+            ((100, 50), (0.0, 0.0)),
+            ((1980, 50), (1880.0, 0.0)),
+            ((100, 930), (0.0, 880.0)),
+            ((1880, 880), (1780.0, 830.0)),
+        ] {
+            let v = stage_view(area, 1.0, spot, pos, size);
+            assert_eq!((v.ghost_x, v.ghost_y), want, "{spot:?}");
         }
-        assert_eq!(origin_in((0, 0), pos, size, side), (0, 0));
-        assert_eq!(origin_in((880, 680), pos, size, side), (780, 480));
-        assert_eq!(origin_in((500, 400), pos, size, side), (450, 300));
     }
 
     #[test]
@@ -400,14 +401,33 @@ mod tests {
         assert_eq!(centered((10, 20, 710, 520), 0.7, (900, 600)), ((10, 20), (700, 500)));
     }
 
+    const BIG: (i32, i32, i32, i32) = (100, 50, 2100, 1050);
+
     #[test]
-    fn origin_is_clamped_into_window() {
-        // Ghost inside the window.
-        assert_eq!(origin_in((500, 400), (100, 100), (900, 600), 120), (400, 300));
-        // Ghost left of / above the window.
-        assert_eq!(origin_in((0, 0), (100, 100), (900, 600), 120), (0, 0));
-        // Ghost beyond the bottom-right: clamped so the whole square fits.
-        assert_eq!(origin_in((5000, 5000), (100, 100), (900, 600), 120), (780, 480));
+    fn target_insets_are_centered() {
+        let (pos, size) = centered(BIG, 0.7, (900, 600));
+        let v = stage_view(BIG, 1.0, (100, 50), pos, size);
+        assert_eq!(v.room, Insets { left: 300.0, top: 150.0, right: 300.0, bottom: 150.0 });
+    }
+
+    #[test]
+    fn room_outside_area_is_clamped() {
+        // Maximized-style rect hanging 8px out on every side.
+        let v = stage_view(BIG, 1.0, (0, 0), (92, 42), (2016, 1016));
+        assert_eq!(v.room, Insets { left: 0.0, top: 0.0, right: 0.0, bottom: 0.0 });
+        // Half off the right edge.
+        let v = stage_view(BIG, 1.0, (0, 0), (1600, 200), (1000, 400));
+        assert_eq!(v.room.right, 0.0);
+        assert_eq!(v.room.left, 1500.0);
+        assert_eq!(v.room.top, 150.0);
+    }
+
+    #[test]
+    fn stage_view_converts_to_logical() {
+        let v = stage_view((0, 0, 3000, 1500), 1.5, (300, 150), (600, 300), (1500, 750));
+        assert_eq!((v.stage_w, v.stage_h), (2000.0, 1000.0));
+        assert_eq!((v.ghost_x, v.ghost_y), (200.0, 100.0));
+        assert_eq!(v.room, Insets { left: 400.0, top: 200.0, right: 600.0, bottom: 300.0 });
     }
 
     #[test]
@@ -428,108 +448,187 @@ pub fn layout(state: State<Perch>) -> Layout {
     *state.layout.lock().unwrap()
 }
 
-/// Result of `expand`, serialized as `{ layout: {left, top}, originX, originY, width,
-/// height }`: the ghost's previous spot relative to the new window's top-left and
-/// the new window size, all in logical px.
-#[derive(Serialize, Clone, Copy)]
+/// Logical-px gaps between the stage (the work area) and the room rect.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
+pub struct Insets {
+    left: f64,
+    top: f64,
+    right: f64,
+    bottom: f64,
+}
+
+/// Result of `expand` and `measure`, serialized as `{ ghostX, ghostY, stageW, stageH,
+/// room: {left, top, right, bottom} }`, all logical px relative to the stage's
+/// top-left: the ghost's spot (not clamped), the stage size and the room rect as
+/// insets from the stage edges.
+#[derive(Serialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct Expanded {
-    layout: Layout,
-    origin_x: f64,
-    origin_y: f64,
-    width: f64,
-    height: f64,
+pub struct Staged {
+    ghost_x: f64,
+    ghost_y: f64,
+    stage_w: f64,
+    stage_h: f64,
+    room: Insets,
 }
 
-/// Describes the window as it is now, with the ghost's remembered `spot` inside it.
-fn describe(
-    app: &AppHandle,
+/// Pure. `area` is (left, top, right, bottom); `spot`, `room_pos` and `room_size`
+/// are physical px. The room rect is clamped into the area before taking insets.
+fn stage_view(
+    area: (i32, i32, i32, i32),
+    scale: f64,
+    spot: (i32, i32),
+    room_pos: (i32, i32),
+    room_size: (i32, i32),
+) -> Staged {
+    let left = room_pos.0.max(area.0).min(area.2);
+    let top = room_pos.1.max(area.1).min(area.3);
+    let right = (room_pos.0 + room_size.0).max(left).min(area.2);
+    let bottom = (room_pos.1 + room_size.1).max(top).min(area.3);
+    let l = |v: i32| v.max(0) as f64 / scale;
+    Staged {
+        ghost_x: (spot.0 - area.0) as f64 / scale,
+        ghost_y: (spot.1 - area.1) as f64 / scale,
+        stage_w: (area.2 - area.0) as f64 / scale,
+        stage_h: (area.3 - area.1) as f64 / scale,
+        room: Insets {
+            left: l(left - area.0),
+            top: l(top - area.1),
+            right: l(area.2 - right),
+            bottom: l(area.3 - bottom),
+        },
+    }
+}
+
+/// Sets position and size; repeats once if the scale factor changed on arrival
+/// (another DPI changes the physical size).
+fn set_bounds(
     window: &WebviewWindow,
-    spot: PhysicalPosition<i32>,
-) -> tauri::Result<Expanded> {
+    pos: (i32, i32),
+    size: (i32, i32),
+) -> tauri::Result<()> {
     let scale = window.scale_factor()?;
-    let side = (ASCUA_CSS * scale).round() as i32;
-    let pos = window.outer_position()?;
-    let size = window.outer_size()?;
-    let (ox, oy) = origin_in(
-        (spot.x, spot.y),
-        (pos.x, pos.y),
-        (size.width as i32, size.height as i32),
-        side,
-    );
-    Ok(Expanded {
-        layout: *app.state::<Perch>().layout.lock().unwrap(),
-        origin_x: ox as f64 / scale,
-        origin_y: oy as f64 / scale,
-        width: size.width as f64 / scale,
-        height: size.height as f64 / scale,
-    })
+    let apply = || -> tauri::Result<()> {
+        window.set_position(PhysicalPosition::new(pos.0, pos.1))?;
+        window.set_size(PhysicalSize::new(size.0.max(1) as u32, size.1.max(1) as u32))
+    };
+    apply()?;
+    if window.scale_factor()? != scale {
+        apply()?;
+    }
+    Ok(())
 }
 
-fn grow(
+/// The ghost monitor's work area and scale, plus the centered room rect.
+fn stage_of(
     app: &AppHandle,
     window: &WebviewWindow,
     spot: PhysicalPosition<i32>,
-) -> tauri::Result<Expanded> {
+) -> tauri::Result<Stage> {
     let side = (ASCUA_CSS * window.scale_factor()?).round() as i32;
     let monitor = match window.monitor_from_point((spot.x + side / 2) as f64, (spot.y + side / 2) as f64)? {
         Some(monitor) => Some(monitor),
         None => window.primary_monitor()?,
     };
-    window.set_resizable(true)?;
-    window.set_min_size(Some(LogicalSize::new(EXPANDED_MIN_WINDOW.0, EXPANDED_MIN_WINDOW.1)))?;
-    if let Some(monitor) = monitor {
-        let area = monitor.work_area();
-        let scale = monitor.scale_factor();
-        let min = (
-            (EXPANDED_MIN.0 * scale).round() as i32,
-            (EXPANDED_MIN.1 * scale).round() as i32,
-        );
-        let ((x, y), (w, h)) = centered(
-            (
-                area.position.x,
-                area.position.y,
-                area.position.x + area.size.width as i32,
-                area.position.y + area.size.height as i32,
-            ),
-            EXPANDED_RATIO,
-            min,
-        );
-        window.set_position(PhysicalPosition::new(x, y))?;
-        window.set_size(PhysicalSize::new(w as u32, h as u32))?;
-        // A different DPI may have changed the size on arrival: size once more.
-        if window.scale_factor()? != scale {
-            window.set_size(PhysicalSize::new(w as u32, h as u32))?;
-            window.set_position(PhysicalPosition::new(x, y))?;
-        }
-    }
-    describe(app, window, spot)
+    let monitor = monitor.ok_or(tauri::Error::WindowNotFound)?;
+    let _ = app;
+    let work = monitor.work_area();
+    let scale = monitor.scale_factor();
+    let area = (
+        work.position.x,
+        work.position.y,
+        work.position.x + work.size.width as i32,
+        work.position.y + work.size.height as i32,
+    );
+    let min = (
+        (EXPANDED_MIN.0 * scale).round() as i32,
+        (EXPANDED_MIN.1 * scale).round() as i32,
+    );
+    Ok(Stage { area, scale, target: centered(area, EXPANDED_RATIO, min) })
 }
 
+fn stored(app: &AppHandle) -> Result<(Stage, PhysicalPosition<i32>), String> {
+    let perch = app.state::<Perch>();
+    let stage = (*perch.stage.lock().unwrap()).ok_or("not expanded")?;
+    let spot = (*perch.spot.lock().unwrap()).ok_or("not expanded")?;
+    Ok((stage, spot))
+}
+
+/// Decides the stage and the room's target rect; does not touch the window.
 #[tauri::command]
-pub fn expand(app: AppHandle, window: WebviewWindow) -> Result<Expanded, String> {
+pub fn expand(app: AppHandle, window: WebviewWindow) -> Result<Staged, String> {
     let perch = app.state::<Perch>();
     if perch.expanded.swap(true, Ordering::Relaxed) {
-        let spot = (*perch.spot.lock().unwrap()).ok_or("no spot")?;
-        return describe(&app, &window, spot).map_err(|e| e.to_string());
+        let (s, spot) = stored(&app)?;
+        return Ok(stage_view(s.area, s.scale, (spot.x, spot.y), s.target.0, s.target.1));
     }
     let result = current(&app, &window)
         .and_then(|rect| {
+            let stage = stage_of(&app, &window, rect.at)?;
             *perch.spot.lock().unwrap() = Some(rect.at);
-            grow(&app, &window, rect.at).map_err(|e| {
-                // Half-grown: put the ghost window back before reporting.
-                let _ = shrink(&app, &window, Some(rect.at));
-                e
-            })
+            *perch.stage.lock().unwrap() = Some(stage);
+            Ok(stage_view(
+                stage.area,
+                stage.scale,
+                (rect.at.x, rect.at.y),
+                stage.target.0,
+                stage.target.1,
+            ))
         })
         .map_err(|e| e.to_string());
     if result.is_err() {
         *perch.spot.lock().unwrap() = None;
+        *perch.stage.lock().unwrap() = None;
         perch.expanded.store(false, Ordering::Relaxed);
     }
-    // The window is `focus: false`; Esc needs keyboard focus.
-    let _ = window.set_focus();
     result
+}
+
+/// Makes the window cover the work area (the morph's stage).
+#[tauri::command]
+pub fn stage(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    let (s, _) = stored(&app)?;
+    let run = || -> tauri::Result<()> {
+        if window.is_maximized()? {
+            window.unmaximize()?;
+        }
+        window.set_resizable(false)?;
+        window.set_min_size(None::<tauri::Size>)?;
+        set_bounds(
+            &window,
+            (s.area.0, s.area.1),
+            (s.area.2 - s.area.0, s.area.3 - s.area.1),
+        )?;
+        // The window is `focus: false`; Esc needs keyboard focus.
+        window.set_focus()
+    };
+    run().map_err(|e| e.to_string())
+}
+
+/// Shrinks the stage window to the room's target rect and makes it resizable.
+#[tauri::command]
+pub fn settle(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    let (s, _) = stored(&app)?;
+    let run = || -> tauri::Result<()> {
+        set_bounds(&window, s.target.0, s.target.1)?;
+        window.set_resizable(true)?;
+        window.set_min_size(Some(LogicalSize::new(EXPANDED_MIN_WINDOW.0, EXPANDED_MIN_WINDOW.1)))
+    };
+    run().map_err(|e| e.to_string())
+}
+
+/// Where the room window is now, as insets in the ghost's stage.
+#[tauri::command]
+pub fn measure(app: AppHandle, window: WebviewWindow) -> Result<Staged, String> {
+    let (s, spot) = stored(&app)?;
+    let pos = window.outer_position().map_err(|e| e.to_string())?;
+    let size = window.outer_size().map_err(|e| e.to_string())?;
+    Ok(stage_view(
+        s.area,
+        s.scale,
+        (spot.x, spot.y),
+        (pos.x, pos.y),
+        (size.width as i32, size.height as i32),
+    ))
 }
 
 #[tauri::command]
@@ -541,6 +640,7 @@ pub fn collapse(app: AppHandle, window: WebviewWindow) -> Result<Layout, String>
     let spot = *perch.spot.lock().unwrap();
     let result = shrink(&app, &window, spot).map_err(|e| e.to_string());
     perch.expanded.store(false, Ordering::Relaxed);
+    *perch.stage.lock().unwrap() = None;
     result
 }
 

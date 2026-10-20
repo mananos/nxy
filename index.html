@@ -23,18 +23,28 @@
       </footer>
     </section>
 
+    <span id="room-ring" aria-hidden="true"></span>
+
     <section id="room" hidden>
       <header id="room-bar">
         <span>Ascua</span>
         <span class="room-buttons">
-          <button id="room-max" class="quiet" aria-label="Maximize">&#x25A1;</button>
-          <button id="room-close" class="quiet" aria-label="Close">&#x2715;</button>
+          <button id="room-max" class="wbtn" aria-label="Maximize">&#x25A1;</button>
+          <button id="room-close" class="wbtn" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M2.5 2.5l9 9M11.5 2.5l-9 9"></path></svg>
+          </button>
         </span>
       </header>
       <main>
-        <h1>Hello user!</h1>
+        <h1><span class="pop pop-1">Hello</span><span class="pop pop-2">user!</span></h1>
       </main>
     </section>
+
+    <span id="room-embers" aria-hidden="true">
+      <span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span>
+      <span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span>
+      <span class="ember"></span><span class="ember"></span><span class="ember"></span><span class="ember"></span>
+    </span>
 
     <div id="ascua-host"></div>
   </body>
