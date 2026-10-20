@@ -2,6 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { mountAscua } from "./ascua";
 import { live, type Need } from "./life";
+import { draggable } from "./drag";
+import { applyLayout, type Layout } from "./layout";
+import { mountRoom } from "./room";
 
 interface PermissionRequest {
   id: number;
@@ -26,39 +29,22 @@ const host = document.querySelector<HTMLElement>("#ascua-host")!;
 const ascua = mountAscua(host, "stage");
 const life = live(ascua);
 
-// A press that moves beyond DRAG_PX starts an OS window drag; a plain click pokes.
-const DRAG_PX = 4;
-let press: { x: number; y: number } | null = null;
-let dragged = false;
-host.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0) return;
-  press = { x: event.screenX, y: event.screenY };
-  dragged = false;
+const room = mountRoom(document.querySelector<HTMLElement>("#room")!, host, ascua);
+
+// A plain click pokes (after DBL_MS, so a double-click can cancel it); a double-click opens the room.
+const DBL_MS = 500; // the Windows default double-click interval
+let pokeTimer: ReturnType<typeof setTimeout> | undefined;
+const wasDragged = draggable(host);
+host.addEventListener("click", (event) => {
+  if (wasDragged() || event.detail > 1) return;
+  clearTimeout(pokeTimer);
+  pokeTimer = setTimeout(() => life.poke(), DBL_MS);
 });
-host.addEventListener("pointermove", (event) => {
-  if (!press || !(event.buttons & 1)) return;
-  if (Math.hypot(event.screenX - press.x, event.screenY - press.y) <= DRAG_PX) return;
-  dragged = true;
-  press = null;
-  invoke("drag").catch(() => {});
-});
-host.addEventListener("click", () => {
-  if (dragged) {
-    dragged = false;
-    return;
-  }
-  life.poke();
+host.addEventListener("dblclick", () => {
+  clearTimeout(pokeTimer);
+  room.expand();
 });
 
-interface Layout {
-  left: boolean;
-  top: boolean;
-}
-
-function applyLayout({ left, top }: Layout) {
-  document.body.dataset.x = left ? "left" : "right";
-  document.body.dataset.y = top ? "top" : "bottom";
-}
 invoke<Layout>("layout").then(applyLayout);
 listen<Layout>("layout", ({ payload }) => applyLayout(payload));
 
@@ -96,8 +82,16 @@ bubble.querySelectorAll<HTMLButtonElement>("button").forEach((button) => {
   button.addEventListener("click", () => decide(button.dataset.decision as Decision));
 });
 
+let arrivals: Promise<void> = Promise.resolve();
+
 listen<PermissionRequest>("permission-request", ({ payload }) => {
-  queue.push(payload);
-  if (queue.length === 1) life.need(actFor(payload));
-  render();
+  // Serialise so a burst of requests keeps its order while the room collapses.
+  arrivals = arrivals
+    .then(async () => {
+      if (room.isOpen()) await room.collapse().catch(() => {});
+      queue.push(payload);
+      if (queue.length === 1) life.need(actFor(payload));
+      render();
+    })
+    .catch(() => {});
 });

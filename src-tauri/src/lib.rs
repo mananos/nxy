@@ -11,7 +11,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             bridge::resolve,
             perch::drag,
-            perch::layout
+            perch::layout,
+            perch::expand,
+            perch::collapse,
+            perch::toggle_maximize
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").expect("main window");

@@ -120,3 +120,48 @@ button.quiet {
 }
 
 button:hover { filter: brightness(1.12); }
+
+#room {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+#room[hidden] { display: none; }
+
+#room-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 14px;
+  font-weight: 600;
+  cursor: grab;
+}
+
+#room main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+#room h1 { margin: 0; font-size: clamp(2rem, 5vw, 4rem); }
+
+.room-buttons { display: flex; gap: 4px; }
+
+body[data-max] #room { border-radius: 0; box-shadow: none; }
+
+body[data-room="open"] #room main { opacity: 1; }
+body[data-room="open"] #ascua-host,
+body[data-room="closing"] #ascua-host { visibility: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  #room main { transition: none; }
+}

@@ -10,11 +10,20 @@ use std::{fs, thread};
 use serde::Serialize;
 use serde_json::{Value, json};
 use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, State, WebviewWindow,
+    AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, PhysicalSize, State,
+    WebviewWindow,
 };
 
 /// Side of `#ascua-host` in CSS px; must match src/styles.css.
 const ASCUA_CSS: f64 = 120.0;
+/// Window size in CSS px when collapsed; must match tauri.conf.json.
+const COMPACT: (f64, f64) = (420.0, 320.0);
+/// The expanded window is this share of the work area, but at least `EXPANDED_MIN`
+/// (logical px) and never bigger than the work area; the user may resize it down to
+/// `EXPANDED_MIN_WINDOW`.
+const EXPANDED_RATIO: f64 = 0.7;
+const EXPANDED_MIN: (f64, f64) = (900.0, 600.0);
+const EXPANDED_MIN_WINDOW: (f64, f64) = (480.0, 360.0);
 const MARGIN: i32 = 16;
 const POLL: Duration = Duration::from_millis(40);
 const SETTLE: Duration = Duration::from_millis(600);
@@ -34,6 +43,9 @@ pub struct Layout {
 pub struct Perch {
     layout: Mutex<Layout>,
     bubble: AtomicBool,
+    expanded: AtomicBool,
+    /// The ghost's screen spot (physical px) from when the window expanded.
+    spot: Mutex<Option<PhysicalPosition<i32>>>,
     clickable: AtomicBool,
 }
 
@@ -222,11 +234,21 @@ pub fn watch(app: AppHandle) {
                     && c.y >= at.y as f64
                     && c.y < (at.y + side) as f64
             });
-            let want = perch.bubble.load(Ordering::Relaxed) || inside;
+            let bubble = perch.bubble.load(Ordering::Relaxed);
+            let expanded = perch.expanded.load(Ordering::Relaxed);
+            let want = wants_clicks(bubble, expanded, inside);
             if want != perch.clickable.load(Ordering::Relaxed)
                 && window.set_ignore_cursor_events(!want).is_ok()
             {
                 perch.clickable.store(want, Ordering::Relaxed);
+            }
+
+            // Expanded: the window is not the ghost; never save or re-place. Forget
+            // the last spot so collapsing starts fresh.
+            if expanded {
+                last = None;
+                rect = None;
+                continue;
             }
 
             let key = (at.x, at.y);
@@ -240,7 +262,7 @@ pub fn watch(app: AppHandle) {
                 saved = Some(key);
                 save_position(&app, at);
                 // A drag may have left the open bubble off-screen: flip it.
-                if perch.bubble.load(Ordering::Relaxed) {
+                if replaces_for_bubble(bubble, expanded) {
                     let _ = place(&app, &window, at);
                     rect = None;
                 }
@@ -249,11 +271,41 @@ pub fn watch(app: AppHandle) {
     });
 }
 
+/// The expanded panel and an open bubble make the whole window clickable.
+fn wants_clicks(bubble: bool, expanded: bool, inside: bool) -> bool {
+    bubble || expanded || inside
+}
+
+/// Window rect (left, top, width, height) for a window centered in `area` (left, top,
+/// right, bottom): `ratio` of the area, at least `min`, never bigger than the area.
+fn centered(area: (i32, i32, i32, i32), ratio: f64, min: (i32, i32)) -> ((i32, i32), (i32, i32)) {
+    let (aw, ah) = (area.2 - area.0, area.3 - area.1);
+    let w = ((aw as f64 * ratio).round() as i32).max(min.0).min(aw);
+    let h = ((ah as f64 * ratio).round() as i32).max(min.1).min(ah);
+    ((area.0 + (aw - w) / 2, area.1 + (ah - h) / 2), (w, h))
+}
+
+/// The ghost's top-left relative to the window's top-left, clamped so the ghost's
+/// `side` square lies inside the window.
+fn origin_in(spot: (i32, i32), win_pos: (i32, i32), win: (i32, i32), side: i32) -> (i32, i32) {
+    (
+        (spot.0 - win_pos.0).min(win.0 - side).max(0),
+        (spot.1 - win_pos.1).min(win.1 - side).max(0),
+    )
+}
+
+/// A bubble re-places the window only while collapsed.
+fn replaces_for_bubble(bubble: bool, expanded: bool) -> bool {
+    bubble && !expanded
+}
+
 /// A bubble needs the whole window clickable and on screen; re-place first so it
 /// opens on the free side of Ascua.
 pub fn set_bubble(app: &AppHandle, shown: bool) {
-    app.state::<Perch>().bubble.store(shown, Ordering::Relaxed);
-    if !shown {
+    let perch = app.state::<Perch>();
+    perch.bubble.store(shown, Ordering::Relaxed);
+    // Expanded: the frontend collapses first, so there is nothing to re-place.
+    if !replaces_for_bubble(shown, perch.expanded.load(Ordering::Relaxed)) {
         return;
     }
     if let Some(window) = app.get_webview_window("main") {
@@ -311,6 +363,54 @@ mod tests {
     }
 
     #[test]
+    fn expanded_gating() {
+        assert!(wants_clicks(false, true, false));
+        assert!(wants_clicks(true, false, false));
+        assert!(wants_clicks(false, false, true));
+        assert!(!wants_clicks(false, false, false));
+        assert!(replaces_for_bubble(true, false));
+        assert!(!replaces_for_bubble(true, true));
+        assert!(!replaces_for_bubble(false, false));
+    }
+
+    #[test]
+    fn ghost_stays_inside_centered_window_in_every_corner() {
+        let (pos, size) = centered(AREA, 0.7, (900, 600));
+        assert_eq!((pos, size), ((50, 100), (900, 600)));
+        let side = 120;
+        // Ghost in each corner of the work area, plus one inside the window.
+        for spot in [(0, 0), (880, 0), (0, 680), (880, 680), (500, 400)] {
+            let (ox, oy) = origin_in(spot, pos, size, side);
+            assert!((0..=size.0 - side).contains(&ox), "{spot:?} -> {ox}");
+            assert!((0..=size.1 - side).contains(&oy), "{spot:?} -> {oy}");
+        }
+        assert_eq!(origin_in((0, 0), pos, size, side), (0, 0));
+        assert_eq!(origin_in((880, 680), pos, size, side), (780, 480));
+        assert_eq!(origin_in((500, 400), pos, size, side), (450, 300));
+    }
+
+    #[test]
+    fn centered_uses_ratio_min_and_clamp() {
+        // 70% of 2000x1000 = 1400x700, centered in an offset area.
+        let area = (100, 50, 2100, 1050);
+        assert_eq!(centered(area, 0.7, (900, 600)), ((400, 200), (1400, 700)));
+        // Minimum wins over the ratio.
+        assert_eq!(centered((0, 0, 1200, 800), 0.7, (900, 600)), ((150, 100), (900, 600)));
+        // Work area smaller than the minimum: clamped to the area.
+        assert_eq!(centered((10, 20, 710, 520), 0.7, (900, 600)), ((10, 20), (700, 500)));
+    }
+
+    #[test]
+    fn origin_is_clamped_into_window() {
+        // Ghost inside the window.
+        assert_eq!(origin_in((500, 400), (100, 100), (900, 600), 120), (400, 300));
+        // Ghost left of / above the window.
+        assert_eq!(origin_in((0, 0), (100, 100), (900, 600), 120), (0, 0));
+        // Ghost beyond the bottom-right: clamped so the whole square fits.
+        assert_eq!(origin_in((5000, 5000), (100, 100), (900, 600), 120), (780, 480));
+    }
+
+    #[test]
     fn work_area_narrower_than_window_prefers_left_corner() {
         let (pos, l) = fit((100, 300), 120, (420, 600), (0, 0, 300, 800));
         assert_eq!((pos.0, l.left), (100, true));
@@ -326,4 +426,154 @@ pub fn drag(window: WebviewWindow) {
 #[tauri::command]
 pub fn layout(state: State<Perch>) -> Layout {
     *state.layout.lock().unwrap()
+}
+
+/// Result of `expand`, serialized as `{ layout: {left, top}, originX, originY, width,
+/// height }`: the ghost's previous spot relative to the new window's top-left and
+/// the new window size, all in logical px.
+#[derive(Serialize, Clone, Copy)]
+#[serde(rename_all = "camelCase")]
+pub struct Expanded {
+    layout: Layout,
+    origin_x: f64,
+    origin_y: f64,
+    width: f64,
+    height: f64,
+}
+
+/// Describes the window as it is now, with the ghost's remembered `spot` inside it.
+fn describe(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    spot: PhysicalPosition<i32>,
+) -> tauri::Result<Expanded> {
+    let scale = window.scale_factor()?;
+    let side = (ASCUA_CSS * scale).round() as i32;
+    let pos = window.outer_position()?;
+    let size = window.outer_size()?;
+    let (ox, oy) = origin_in(
+        (spot.x, spot.y),
+        (pos.x, pos.y),
+        (size.width as i32, size.height as i32),
+        side,
+    );
+    Ok(Expanded {
+        layout: *app.state::<Perch>().layout.lock().unwrap(),
+        origin_x: ox as f64 / scale,
+        origin_y: oy as f64 / scale,
+        width: size.width as f64 / scale,
+        height: size.height as f64 / scale,
+    })
+}
+
+fn grow(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    spot: PhysicalPosition<i32>,
+) -> tauri::Result<Expanded> {
+    let side = (ASCUA_CSS * window.scale_factor()?).round() as i32;
+    let monitor = match window.monitor_from_point((spot.x + side / 2) as f64, (spot.y + side / 2) as f64)? {
+        Some(monitor) => Some(monitor),
+        None => window.primary_monitor()?,
+    };
+    window.set_resizable(true)?;
+    window.set_min_size(Some(LogicalSize::new(EXPANDED_MIN_WINDOW.0, EXPANDED_MIN_WINDOW.1)))?;
+    if let Some(monitor) = monitor {
+        let area = monitor.work_area();
+        let scale = monitor.scale_factor();
+        let min = (
+            (EXPANDED_MIN.0 * scale).round() as i32,
+            (EXPANDED_MIN.1 * scale).round() as i32,
+        );
+        let ((x, y), (w, h)) = centered(
+            (
+                area.position.x,
+                area.position.y,
+                area.position.x + area.size.width as i32,
+                area.position.y + area.size.height as i32,
+            ),
+            EXPANDED_RATIO,
+            min,
+        );
+        window.set_position(PhysicalPosition::new(x, y))?;
+        window.set_size(PhysicalSize::new(w as u32, h as u32))?;
+        // A different DPI may have changed the size on arrival: size once more.
+        if window.scale_factor()? != scale {
+            window.set_size(PhysicalSize::new(w as u32, h as u32))?;
+            window.set_position(PhysicalPosition::new(x, y))?;
+        }
+    }
+    describe(app, window, spot)
+}
+
+#[tauri::command]
+pub fn expand(app: AppHandle, window: WebviewWindow) -> Result<Expanded, String> {
+    let perch = app.state::<Perch>();
+    if perch.expanded.swap(true, Ordering::Relaxed) {
+        let spot = (*perch.spot.lock().unwrap()).ok_or("no spot")?;
+        return describe(&app, &window, spot).map_err(|e| e.to_string());
+    }
+    let result = current(&app, &window)
+        .and_then(|rect| {
+            *perch.spot.lock().unwrap() = Some(rect.at);
+            grow(&app, &window, rect.at).map_err(|e| {
+                // Half-grown: put the ghost window back before reporting.
+                let _ = shrink(&app, &window, Some(rect.at));
+                e
+            })
+        })
+        .map_err(|e| e.to_string());
+    if result.is_err() {
+        *perch.spot.lock().unwrap() = None;
+        perch.expanded.store(false, Ordering::Relaxed);
+    }
+    // The window is `focus: false`; Esc needs keyboard focus.
+    let _ = window.set_focus();
+    result
+}
+
+#[tauri::command]
+pub fn collapse(app: AppHandle, window: WebviewWindow) -> Result<Layout, String> {
+    let perch = app.state::<Perch>();
+    if !perch.expanded.load(Ordering::Relaxed) {
+        return Ok(*perch.layout.lock().unwrap());
+    }
+    let spot = *perch.spot.lock().unwrap();
+    let result = shrink(&app, &window, spot).map_err(|e| e.to_string());
+    perch.expanded.store(false, Ordering::Relaxed);
+    result
+}
+
+/// Returns the window to Ascua's compact size at `spot` (or where it is now).
+fn shrink(
+    app: &AppHandle,
+    window: &WebviewWindow,
+    spot: Option<PhysicalPosition<i32>>,
+) -> tauri::Result<Layout> {
+    if window.is_maximized()? {
+        window.unmaximize()?;
+    }
+    window.set_resizable(false)?;
+    window.set_min_size(None::<tauri::Size>)?;
+    // The spot is still the ghost's: the expanded window never saved a position.
+    let at = match spot {
+        Some(at) => at,
+        None => current(app, window)?.at,
+    };
+    window.set_size(LogicalSize::new(COMPACT.0, COMPACT.1))?;
+    place(app, window, at)?;
+    Ok(*app.state::<Perch>().layout.lock().unwrap())
+}
+
+/// Toggles the expanded window's maximized state; returns the new state.
+#[tauri::command]
+pub fn toggle_maximize(window: WebviewWindow) -> Result<bool, String> {
+    let maximized = window.is_maximized().map_err(|e| e.to_string())?;
+    if maximized {
+        window.unmaximize()
+    } else {
+        window.maximize()
+    }
+    .map_err(|e| e.to_string())?;
+    Ok(!maximized)
 }
