@@ -1,12 +1,13 @@
 /* State palette: colour is information. */
 /* Themes set the resting colour (--i*). A theme may also move a signal colour (--x* alert, --w* warn, --q* ask, --h* cheer) so it never blends into the body. */
-:root, [data-theme] { --i1: #ede9fe; --i2: #a78bfa; --i3: #5b21b6; --ig: #c4b5fd; --x1: #fae8ff; --x2: #d946ef; --x3: #7e22ce; --xg: #f0abfc; --w1: #ffedd5; --w2: #fb923c; --w3: #9a3412; --wg: #fdba74; --q1: #cffafe; --q2: #22d3ee; --q3: #155e75; --qg: #67e8f9; --h1: #dcfce7; --h2: #4ade80; --h3: #15803d; --hg: #86efac; }
+/* Default "neon": dark violet wisp with a subtle neon rim. Alert moves to rose so it never reads as resting. */
+:root, [data-theme] { --i1: #f5ebff; --i2: #c026d3; --i3: #22104a; --ig: #e7a2ff; --x1: #ffe4e6; --x2: #f43f5e; --x3: #881337; --xg: #fda4af; --w1: #ffedd5; --w2: #fb923c; --w3: #9a3412; --wg: #fdba74; --q1: #cffafe; --q2: #22d3ee; --q3: #155e75; --qg: #67e8f9; --h1: #dcfce7; --h2: #4ade80; --h3: #15803d; --hg: #86efac; }
 [data-theme="classic"] { --i1: #fffbeb; --i2: #fcd34d; --i3: #b45309; --ig: #fdba74; --w1: #fee2e2; --w2: #f87171; --w3: #991b1b; --wg: #fca5a5; }
 [data-theme="mint"] { --i1: #ecfdf5; --i2: #6ee7b7; --i3: #047857; --ig: #a7f3d0; }
 [data-theme="pink"] { --i1: #fdf2f8; --i2: #f9a8d4; --i3: #be185d; --ig: #fbcfe8; --x1: #f5f3ff; --x2: #8b5cf6; --x3: #4c1d95; --xg: #c4b5fd; }
 [data-theme="sky"] { --i1: #f0f9ff; --i2: #7dd3fc; --i3: #0369a1; --ig: #bae6fd; --q1: #ede9fe; --q2: #a78bfa; --q3: #5b21b6; --qg: #c4b5fd; }
 [data-theme="lime"] { --i1: #f7fee7; --i2: #bef264; --i3: #4d7c0f; --ig: #d9f99d; --h1: #fef9c3; --h2: #facc15; --h3: #a16207; --hg: #fde047; }
-[data-theme="coral"] { --i1: #fff1f2; --i2: #fda4af; --i3: #be123c; --ig: #fecdd3; }
+[data-theme="coral"] { --i1: #fff1f2; --i2: #fda4af; --i3: #be123c; --ig: #fecdd3; --x1: #fae8ff; --x2: #d946ef; --x3: #7e22ce; --xg: #f0abfc; }
 [data-theme="graphite"] { --i1: #f3f4f6; --i2: #9ca3af; --i3: #1f2937; --ig: #e5e7eb; }
 [data-tone] { --c1: var(--i1); --c2: var(--i2); --c3: var(--i3); --glow: var(--ig); }
 [data-tone="sleep"] { --c1: #c7d2fe; --c2: #6366f1; --c3: #1e1b4b; --glow: #818cf8; }
@@ -17,141 +18,3 @@
 
 .ascua { width: 100%; height: 100%; }
 .ascua .flip { width: 100%; height: 100%; transition: transform 0.25s; }
-
-/* ---------- Ascua ---------- */
-/* Performance: no filters, no masks; keyframes only touch transform and opacity. */
-.ch { width: 100%; height: 100%; overflow: visible; }
-.ch stop { transition: stop-color 0.6s; }
-.ch .c1 { stop-color: var(--c1); }
-.ch .c2 { stop-color: var(--c2); }
-.ch .c3 { stop-color: var(--c3); }
-.ch .gl { stop-color: var(--glow); }
-.ch .glowfill { fill: var(--glow); transition: fill 0.6s; }
-.ch .ink { fill: #1a0b2e; }
-.ch .ink-s { fill: none; stroke: #1a0b2e; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.ch .shadow { fill: #000; opacity: 0.45; }
-.ch .body { fill-opacity: 0.9; }
-.ch .float, .ch .squash, .ch .look, .ch .arm, .ch .shadow { transform-box: view-box; }
-.ch .float { will-change: transform; animation: bob 3s ease-in-out infinite; }
-.ch .shadow { transform-origin: 60px 110px; animation: shadowBob 3s ease-in-out infinite; }
-.ch .squash { will-change: transform; transform-origin: 60px 104px; transition: transform 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
-.ch .ghost-body { transition: opacity 0.6s; }
-.ch .arm { transition: transform 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
-.ch .arml { transform-origin: 34px 62px; transform: rotate(8deg); }
-.ch .armr { transform-origin: 86px 62px; transform: rotate(-8deg); }
-
-/* Blank lenses */
-.v-blank .visor { fill: #0b0f14; stroke: var(--glow); stroke-width: 1.2; transition: stroke 0.6s, opacity 0.6s; }
-.v-blank .shine { fill: #fff; opacity: 0.4; transform-box: view-box; animation: shine 4.5s ease-in-out infinite; }
-[data-tone="sleep"] .v-blank .visor { opacity: 0.55; }
-[data-tone="sleep"] .v-blank .shine { display: none; }
-[data-act="alert"] .v-blank .visor-glow, [data-act="warn"] .v-blank .visor-glow, [data-act="ask"] .v-blank .visor-glow, [data-act="cheer"] .v-blank .visor-glow { animation: visorPulse 1.2s ease-in-out infinite; }
-
-/* Headset */
-.ch .hband { fill: none; stroke: #1f2937; stroke-width: 5; stroke-linecap: round; }
-.ch .cup { fill: #1f2937; stroke: #0b0f14; stroke-width: 1; }
-.ch .cupled { fill: var(--glow); }
-.ch .boom { fill: none; stroke: #1f2937; stroke-width: 2; stroke-linecap: round; }
-
-/* Aura: a static radial glow instead of a drop-shadow filter. */
-.ch .aura { pointer-events: none; }
-
-/* Props and effects: hidden unless the act shows them. */
-.ch .prop, .ch .mouth { display: none; }
-[data-mouth="smile"] .m-smile, [data-mouth="open"] .m-open, [data-mouth="o"] .m-o, [data-mouth="yawn"] .m-yawn, [data-mouth="sleep"] .m-sleep, [data-mouth="warn"] .m-warn, [data-mouth="flat"] .m-flat,
-[data-act="code"] .p-code, [data-act="code"] .p-glyphs, [data-act="read"] .p-read, [data-act="mate"] .p-mate, [data-act="juggle"] .p-juggle, [data-act="think"] .p-think,
-[data-act="alert"] .p-bang, [data-act="warn"] .p-bang, [data-act="warn"] .p-glitch, [data-act="ask"] .p-q, [data-act="sleep"] .p-z, [data-act="cheer"] .p-spark, [data-act="dance"] .p-notes { display: inline; }
-.ch .gourd { fill: #b45309; }
-.ch .yerba { fill: #65a30d; }
-.ch .bombilla { fill: none; stroke: #d1d5db; stroke-width: 2.2; stroke-linecap: round; }
-.ch .steam path { fill: none; stroke: #e5e7eb; stroke-width: 1.6; stroke-linecap: round; opacity: 0; animation: rise 2s ease-out infinite; transform-box: fill-box; }
-.ch .steam path:nth-child(2) { animation-delay: 1s; }
-.ch .laptop { fill: #cbd5e1; }
-.ch .screen { fill: #334155; }
-.ch .page { fill: #fef3c7; stroke: #d6c7a1; stroke-width: 0.8; }
-.ch .spine { fill: none; stroke: #b45309; stroke-width: 1.2; }
-.ch text { font: 800 22px/1 "Segoe UI", system-ui, sans-serif; }
-.ch .bang, .ch .q { transform-box: fill-box; transform-origin: 50% 100%; }
-.ch .bang { animation: pop 0.35s ease-out both, wiggle 1.1s 0.35s ease-in-out infinite; }
-.ch .q { animation: pop 0.35s ease-out both, qbob 1.6s 0.35s ease-in-out infinite; }
-.ch .z { font-size: 13px; opacity: 0; animation: rise 3s ease-out infinite; transform-box: fill-box; }
-.ch .z + .z { font-size: 17px; animation-delay: 1.5s; }
-.ch .spark { transform-box: fill-box; transform-origin: center; animation: twinkle 1.1s ease-in-out infinite; }
-.ch .spark:nth-child(2) { animation-delay: 0.35s; }
-.ch .spark:nth-child(3) { animation-delay: 0.7s; }
-.ch .riser text { font: 700 15px "Segoe UI Symbol", system-ui, sans-serif; opacity: 0; animation: rise 1.8s ease-out infinite; transform-box: fill-box; }
-.ch .glyphs text { font: 700 11px "Cascadia Mono", Consolas, monospace; }
-.ch .riser text:nth-child(2) { animation-delay: 0.6s; }
-.ch .riser text:nth-child(3) { animation-delay: 1.2s; }
-.ch .think circle { animation: dots 1.5s ease-in-out infinite; }
-.ch .think circle:nth-child(2) { animation-delay: 0.25s; }
-.ch .think circle:nth-child(3) { animation-delay: 0.5s; }
-.ch .tint { opacity: 0; transform-box: fill-box; animation: glitchTint 1.3s steps(1) infinite; }
-.ch .tint-l { translate: -3px 0; }
-.ch .tint-r { translate: 3px 0; }
-.ch .mini { transform-box: view-box; transform-origin: 60px 55px; animation: orbit 2.4s linear infinite; }
-.ch .mini:nth-child(2) { animation-delay: -0.8s; }
-.ch .mini:nth-child(3) { animation-delay: -1.6s; }
-.ch .minig { fill: var(--c1); stroke: var(--c2); stroke-width: 0.6; opacity: 0.9; }
-
-/* ---------- Acts ---------- */
-[data-act="wave"] .armr { animation: waveFast 0.35s ease-in-out infinite alternate; }
-[data-act="dance"] .squash { animation: dance 0.55s ease-in-out infinite alternate; }
-[data-act="mate"] .squash { transform: rotate(-3deg); }
-[data-act="mate"] .armr { transform: rotate(40deg); }
-[data-act="read"] .arml, [data-act="code"] .arml { transform: rotate(-40deg); }
-[data-act="read"] .armr, [data-act="code"] .armr { transform: rotate(40deg); }
-[data-act="dance"] .cupled, [data-act="code"] .cupled { animation: ledPulse 0.55s ease-in-out infinite alternate; }
-[data-act="look"] .look { animation: look 2.6s ease-in-out infinite; }
-[data-act="stretch"] .squash { animation: stretch 1.8s ease-in-out infinite; }
-[data-act="stretch"] .arml { transform: rotate(60deg); }
-[data-act="stretch"] .armr { transform: rotate(-60deg); }
-[data-act="yawn"] .squash { animation: yawn 2.4s ease-in-out infinite; }
-[data-act="meditate"] .float { animation: levitate 5s ease-in-out infinite; }
-[data-act="meditate"] .shadow { transform: scaleX(0.6); opacity: 0.25; animation: none; }
-[data-act="sleep"] .float { animation-duration: 5.5s; }
-[data-act="sleep"] .shadow { animation-duration: 5.5s; }
-[data-act="sleep"] .ghost-body { opacity: 0.6; }
-[data-act="code"] .squash { transform: rotate(3deg) translateY(2px); }
-[data-act="read"] .squash { transform: rotate(-2deg); }
-[data-act="think"] .squash { animation: tilt 3s ease-in-out infinite; }
-[data-act="juggle"] .squash { animation: tilt 2.4s ease-in-out infinite; }
-[data-act="juggle"] .arml { transform: rotate(50deg); }
-[data-act="juggle"] .armr { transform: rotate(-50deg); }
-[data-act="alert"] .squash { animation: jump 0.9s ease-in-out infinite; }
-[data-act="alert"] .arml, [data-act="cheer"] .arml { transform: rotate(80deg); }
-[data-act="alert"] .armr, [data-act="cheer"] .armr { transform: rotate(-80deg); }
-[data-act="warn"] .squash { animation: glitch 1.3s steps(1) infinite; }
-[data-act="ask"] .squash { animation: tilt 2.2s ease-in-out infinite; }
-[data-act="cheer"] .squash { animation: jump 0.7s ease-in-out infinite; }
-
-/* Paused: tab hidden, bubble hidden, or asleep. */
-.ascua.paused .ch, .ascua.paused .ch * { animation-play-state: paused !important; }
-.ascua.paused .p-z .z { animation: none; opacity: 0.8; }
-
-@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
-@keyframes levitate { 0%, 100% { transform: translateY(-8px); } 50% { transform: translateY(-15px); } }
-@keyframes shadowBob { 0%, 100% { transform: scaleX(1); opacity: 0.45; } 50% { transform: scaleX(0.8); opacity: 0.3; } }
-@keyframes shine { 0%, 55% { transform: translateX(-30px); } 80%, 100% { transform: translateX(44px); } }
-@keyframes visorPulse { 0%, 100% { opacity: 0; } 50% { opacity: 0.35; } }
-@keyframes waveFast { from { transform: rotate(-20deg); } to { transform: rotate(-70deg); } }
-@keyframes tilt { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(-8deg); } }
-@keyframes dance { 0% { transform: rotate(-10deg); } 50% { transform: rotate(0) translateY(-6px); } 100% { transform: rotate(10deg); } }
-@keyframes look { 0%, 20%, 100% { transform: translateX(0); } 30%, 55% { transform: translateX(-4px); } 65%, 90% { transform: translateX(4px); } }
-@keyframes stretch { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(0.9, 1.16); } }
-@keyframes yawn { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06, 1.03); } }
-@keyframes jump { 0%, 100% { transform: translateY(0) scale(1, 1); } 30% { transform: translateY(-12px) scale(0.94, 1.08); } 60% { transform: translateY(0) scale(1.08, 0.92); } }
-@keyframes glitch { 0%, 100% { transform: translate(0); } 20% { transform: translate(-3px, 1px); } 40% { transform: translate(2px, -1px) skewX(-8deg); } 60% { transform: translate(0); } 80% { transform: translate(3px, 0) skewX(6deg); } }
-@keyframes glitchTint { 0%, 40%, 60%, 100% { opacity: 0; transform: translate(0); } 20% { opacity: 0.7; transform: translate(0); } 80% { opacity: 0.7; transform: translate(1px, 0); } }
-@keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
-@keyframes wiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(8deg); } }
-@keyframes qbob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-@keyframes twinkle { 0%, 100% { transform: scale(0.5); opacity: 0.4; } 50% { transform: scale(1.1); opacity: 1; } }
-@keyframes rise { 0% { opacity: 0; transform: translateY(0); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-18px); } }
-@keyframes dots { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
-@keyframes orbit { from { transform: rotate(0deg) translateX(40px) rotate(0deg); } to { transform: rotate(360deg) translateX(40px) rotate(-360deg); } }
-@keyframes ledPulse { from { opacity: 0.35; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) {
-  .ch *, .ch { animation: none !important; }
-  .ch .z, .ch .riser text { opacity: 0.8; }
-}

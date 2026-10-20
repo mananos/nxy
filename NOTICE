@@ -1,0 +1,12 @@
+nxy-ascua
+Copyright (c) 2026 mananos
+
+The source code in this repository is licensed under the Apache License 2.0 (see LICENSE),
+except for the following, which are NOT licensed under Apache-2.0 and remain
+All rights reserved:
+
+- The "Ascua" name and character (its design, look and likeness).
+- The character art: everything under src/character/.
+- The application icons: everything under src-tauri/icons/.
+
+Apache-2.0 section 6 grants no rights to use the "Ascua" name or character as a trademark.

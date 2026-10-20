@@ -13,7 +13,7 @@ What sets it apart from [Coucou](https://github.com/Louis-CFM/coucou) (a notch c
 
 ## Decisions
 
-- **Character decided (2026-10-17): the ghost "Auriculares" (variant key `hauris`), default theme coral, named Ascua.** A faded sheet ghost with a blank visor, a mouth, a headset with state LEDs and a mic. It replaces the candle mecha. Its act set is 17 acts: walk and sit were dropped (no legs, faded lower body, and the companion no longer walks); juggle (Task/subagents) became mini ghosts orbiting; mate is held in the arm with the bombilla at the mouth; read/code props sit at arm height; headset LEDs pulse on dance/code.
+- **Character redesigned (2026-10-19): Ascua is a will-o'-the-wisp, half ghost and half ember.** A dark body with a subtle neon rim and a tall flame tip and a small side lick that sway (SMIL morph, paused with the rest); heat glows up from the bottom, an inner flame flickers behind the face and pixel sparks leave the tips. Two pill eyes that blink over a faint blush, and a soft sheen on the body; joy, sleep and alarm reshape them (^ ^, bars, big pills, > <). Colour is the state: the body takes the dark shade and the rim the neon shade of each tone. Arms only in acts that need hands; a mouth only when it says something. Same 17 acts. Earlier attempts (headset, neon outline, block, cursor-eye ghosts) are retired. Character art lives in `src/character/` and is all rights reserved (see NOTICE); the code stays Apache-2.0.
 - **Stay on Tauri 2.** Rust, local socket IPC and the hook already exist; small binary and low RAM for an always-on app. Node pieces (Claude Agent SDK, nxy `.mjs` entries) run as a child process (`claude --output-format stream-json`) or a Node sidecar. Electron only if most of the logic ends up in Node.
 - **No VS Code fork, no IDE from scratch.** A fork means monthly rebases, no Microsoft marketplace (Open VSX only), and no Pylance, C# Dev Kit, Remote-SSH or Live Share.
 - **Workbench, not IDE.** No LSP, autocomplete or debugger. To edit code seriously: an "open in VS Code / IntelliJ" button at the file and line.
@@ -30,7 +30,7 @@ What sets it apart from [Coucou](https://github.com/Louis-CFM/coucou) (a notch c
 
 1. ~~Plan 67b90af0 (drag, remembered position) and the 9 findings of review 5c55d1.~~ Done.
 2. Real test: `npm run tauri dev` plus a real PermissionRequest. Then the first commit.
-3. ~~Define the character~~ Done: Auriculares, coral, Ascua. Ported into `src/ascua.ts` / `src/ascua.css` (replacing the candle) with the 17 acts; the exploration HTMLs were removed.
+3. ~~Define the character~~ Done: will-o'-the-wisp, Ascua (redesigned 2026-10-19). Ported into `src/ascua.ts` / `src/ascua.css` (replacing the candle) with the 17 acts; the exploration HTMLs were removed.
 4. `Character` interface (mount, act, theme) so characters are interchangeable implementations of the same 17 acts.
 5. Settings: your name, character, theme. Stored in `app_config_dir` next to `position.json`.
 6. Notifications: Claude Code `Stop` and `Notification` hooks over the same IPC, plus `tauri-plugin-notification`.

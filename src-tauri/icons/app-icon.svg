@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <radialGradient id="h" gradientUnits="userSpaceOnUse" cx="60" cy="98" r="44"><stop offset="0" stop-color="#c026d3" stop-opacity="0.55"/><stop offset="1" stop-color="#c026d3" stop-opacity="0"/></radialGradient>
+    <linearGradient id="r" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="98"><stop offset="0" stop-color="#e7a2ff"/><stop offset="1" stop-color="#e7a2ff" stop-opacity="0.35"/></linearGradient>
+  </defs>
+  <rect width="120" height="120" rx="26" fill="#0f0a1c"/>
+  <g transform="translate(60 57) scale(1.08) translate(-60 -55)">
+    <path fill="none" stroke="#e7a2ff" stroke-width="7" stroke-opacity="0.08" stroke-linejoin="round" d="M60 98C42 98 31 86 31 72C31 61 35 53 41 46C44 42 45 37 43 30C50 33 54 39 54 46C56 38 58 30 64 22C66 19 67 15 66 11C74 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z"/>
+    <path fill="#22104a" d="M60 98C42 98 31 86 31 72C31 61 35 53 41 46C44 42 45 37 43 30C50 33 54 39 54 46C56 38 58 30 64 22C66 19 67 15 66 11C74 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z"/>
+    <path fill="url(#h)" d="M60 98C42 98 31 86 31 72C31 61 35 53 41 46C44 42 45 37 43 30C50 33 54 39 54 46C56 38 58 30 64 22C66 19 67 15 66 11C74 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z"/>
+    <path fill="#c026d3" opacity="0.2" d="M60 94C49 94 42 87 42 78C42 69 49 62 54 55C57 50 59 44 61 34C66 45 72 54 76 62C79 68 79 73 78 78C77 87 71 94 60 94Z"/>
+    <path fill="none" stroke="#f5ebff" stroke-width="2" stroke-linecap="round" opacity="0.22" d="M38 70C38 61 41 55 45 50"/>
+    <path fill="none" stroke="url(#r)" stroke-width="1.8" stroke-linejoin="round" d="M60 98C42 98 31 86 31 72C31 61 35 53 41 46C44 42 45 37 43 30C50 33 54 39 54 46C56 38 58 30 64 22C66 19 67 15 66 11C74 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z"/>
+    <ellipse fill="#e7a2ff" opacity="0.3" cx="42.5" cy="72" rx="3.6" ry="2"/>
+    <ellipse fill="#e7a2ff" opacity="0.3" cx="77.5" cy="72" rx="3.6" ry="2"/>
+    <rect fill="#f5ebff" x="46" y="56" width="7" height="12" rx="3.5"/>
+    <rect fill="#f5ebff" x="67" y="56" width="7" height="12" rx="3.5"/>
+  </g>
+</svg>

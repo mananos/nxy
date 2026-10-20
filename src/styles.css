@@ -1,5 +1,5 @@
 :root {
-  --panel: rgba(28, 28, 32, 0.94);
+  --panel: rgba(52, 40, 92, 0.94);
   --text: #f2f0ec;
   --allow: #3fae6a;
   --deny: #d6554d;
@@ -77,7 +77,7 @@ body[data-y="top"] #bubble::after {
   height: 44px;
   border-radius: 50%;
   overflow: hidden;
-  background: radial-gradient(circle at 50% 60%, #2a2a36, #14141b);
+  background: radial-gradient(circle at 50% 60%, #2a1a4a, #120a24);
 }
 
 #queued { margin-left: auto; }
