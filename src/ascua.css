@@ -2,13 +2,6 @@
 /* Themes set the resting colour (--i*). A theme may also move a signal colour (--x* alert, --w* warn, --q* ask, --h* cheer) so it never blends into the body. */
 /* Default "neon": dark violet wisp with a subtle neon rim. Alert moves to rose so it never reads as resting. */
 :root, [data-theme] { --i1: #f5ebff; --i2: #c026d3; --i3: #22104a; --ig: #e7a2ff; --x1: #ffe4e6; --x2: #f43f5e; --x3: #881337; --xg: #fda4af; --w1: #ffedd5; --w2: #fb923c; --w3: #9a3412; --wg: #fdba74; --q1: #cffafe; --q2: #22d3ee; --q3: #155e75; --qg: #67e8f9; --h1: #dcfce7; --h2: #4ade80; --h3: #15803d; --hg: #86efac; }
-[data-theme="classic"] { --i1: #fffbeb; --i2: #fcd34d; --i3: #b45309; --ig: #fdba74; --w1: #fee2e2; --w2: #f87171; --w3: #991b1b; --wg: #fca5a5; }
-[data-theme="mint"] { --i1: #ecfdf5; --i2: #6ee7b7; --i3: #047857; --ig: #a7f3d0; }
-[data-theme="pink"] { --i1: #fdf2f8; --i2: #f9a8d4; --i3: #be185d; --ig: #fbcfe8; --x1: #f5f3ff; --x2: #8b5cf6; --x3: #4c1d95; --xg: #c4b5fd; }
-[data-theme="sky"] { --i1: #f0f9ff; --i2: #7dd3fc; --i3: #0369a1; --ig: #bae6fd; --q1: #ede9fe; --q2: #a78bfa; --q3: #5b21b6; --qg: #c4b5fd; }
-[data-theme="lime"] { --i1: #f7fee7; --i2: #bef264; --i3: #4d7c0f; --ig: #d9f99d; --h1: #fef9c3; --h2: #facc15; --h3: #a16207; --hg: #fde047; }
-[data-theme="coral"] { --i1: #fff1f2; --i2: #fda4af; --i3: #be123c; --ig: #fecdd3; --x1: #fae8ff; --x2: #d946ef; --x3: #7e22ce; --xg: #f0abfc; }
-[data-theme="graphite"] { --i1: #f3f4f6; --i2: #9ca3af; --i3: #1f2937; --ig: #e5e7eb; }
 [data-tone] { --c1: var(--i1); --c2: var(--i2); --c3: var(--i3); --glow: var(--ig); }
 [data-tone="sleep"] { --c1: #c7d2fe; --c2: #6366f1; --c3: #1e1b4b; --glow: #818cf8; }
 [data-tone="alert"] { --c1: var(--x1); --c2: var(--x2); --c3: var(--x3); --glow: var(--xg); }

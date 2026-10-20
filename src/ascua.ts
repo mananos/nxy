@@ -1,35 +1,35 @@
 /// <reference types="vite/client" />
 import "./ascua.css";
-import { ghost } from "./character/ghost";
+import { wisp } from "./character/wisp";
 
 export type Act =
   | "idle" | "wave" | "dance" | "mate" | "look" | "stretch" | "yawn" | "meditate"
   | "sleep" | "code" | "read" | "think" | "juggle" | "alert" | "warn" | "ask" | "cheer";
 
-type Mouth = "smile" | "open" | "o" | "yawn" | "sleep" | "warn" | "flat";
+type Mouth = "none" | "open" | "o" | "yawn";
 type Eyes = "happy" | "open" | "wide" | "closed" | "squint";
 
 export const MOUTH: Record<Act, Mouth> = {
-  idle: "smile",
+  idle: "none",
   wave: "open",
   dance: "open",
   mate: "o",
-  look: "smile",
+  look: "none",
   stretch: "o",
   yawn: "yawn",
-  meditate: "smile",
-  sleep: "sleep",
-  code: "flat",
-  read: "smile",
+  meditate: "none",
+  sleep: "none",
+  code: "none",
+  read: "none",
   think: "o",
   juggle: "open",
   alert: "open",
-  warn: "warn",
+  warn: "none",
   ask: "o",
   cheer: "open",
 };
 
-export const EYES: Record<Act, Eyes> = {
+const EYES: Record<Act, Eyes> = {
   idle: "open",
   wave: "happy",
   dance: "happy",
@@ -49,9 +49,9 @@ export const EYES: Record<Act, Eyes> = {
   cheer: "happy",
 };
 
-export const TONE: Partial<Record<Act, string>> = { sleep: "sleep", alert: "alert", warn: "warn", ask: "ask", cheer: "happy" };
+const TONE: Partial<Record<Act, string>> = { sleep: "sleep", alert: "alert", warn: "warn", ask: "ask", cheer: "happy" };
 
-export function setAct(el: HTMLElement, act: Act): void {
+function setAct(el: HTMLElement, act: Act): void {
   el.dataset.act = act;
   el.dataset.tone = TONE[act] ?? "idle";
   el.dataset.mouth = MOUTH[act];
@@ -66,7 +66,7 @@ export interface Ascua {
 }
 
 export function mountAscua(host: HTMLElement, id: string): Ascua {
-  host.innerHTML = `<div class="ascua"><div class="flip">${ghost(id)}</div></div>`;
+  host.innerHTML = `<div class="ascua"><div class="flip">${wisp(id)}</div></div>`;
   const element = host.querySelector<HTMLElement>(".ascua")!;
   const svg = element.querySelector<SVGSVGElement>("svg")!;
   let held = false;

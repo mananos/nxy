@@ -1,6 +1,6 @@
 # nxy-ascua
 
-Ascua is a little ghost with a headset that stays wherever you drag it on your screen (the position is remembered across launches). It answers Claude Code `PermissionRequest` hooks: you approve or reject from a bubble, Ascua reacts differently to destructive commands and questions, and it lives its own life (floats, dances, naps in place) in between.
+Ascua is a little will-o'-the-wisp, half ghost and half ember, that stays wherever you drag it on your screen (the position is remembered across launches). It answers Claude Code `PermissionRequest` hooks: you approve or reject from a bubble, Ascua reacts differently to destructive commands and questions, and it lives its own life (floats, dances, naps in place) in between.
 
 ## Layout
 

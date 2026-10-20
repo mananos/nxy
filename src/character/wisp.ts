@@ -1,6 +1,6 @@
 // Ascua character art. Copyright (c) 2026 mananos. All rights reserved.
 // Not covered by the Apache-2.0 license of this repository; see NOTICE.
-import "./ghost.css";
+import "./wisp.css";
 
 const star = (x: number, y: number, r: number): string => {
   const k = r * 0.28;
@@ -10,7 +10,7 @@ const star = (x: number, y: number, r: number): string => {
 // Body: a will-o'-the-wisp, half ghost and half ember: a round belly, a tall tip and a small lick
 // on the side, both swaying.
 // Both frames use the same commands so SMIL can morph between them.
-export const BODY = "M60 98C42 98 31 86 31 72C31 61 35 53 41 46C44 42 45 37 43 30C50 33 54 39 54 46C56 38 58 30 64 22C66 19 67 15 66 11C74 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z";
+const BODY = "M60 98C42 98 31 86 31 72C31 61 35 53 41 46C44 42 45 37 43 30C50 33 54 39 54 46C56 38 58 30 64 22C66 19 67 15 66 11C74 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z";
 const BODY_B = "M60 98C42 98 31 86 31 72C31 61 35 53 41 46C45 42 47 36 46 29C51 33 54 39 54 46C55 38 56 30 60 23C61 20 61 16 59 12C70 20 81 32 85 43C89 52 89 62 89 72C89 86 78 98 60 98Z";
 const sway = (cls: string, paint = ""): string =>
   `<path class="${cls}" d="${BODY}" ${paint}><animate attributeName="d" dur="2.4s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1" values="${BODY};${BODY_B};${BODY}"/></path>`;
@@ -58,11 +58,11 @@ const FX =
   `<g class="prop p-glyphs riser glyphs"><text class="glowfill" x="18" y="52">{}</text><text class="glowfill" x="88" y="46">&lt;/&gt;</text><text class="glowfill" x="92" y="26">01</text></g>` +
   `<g class="prop p-think"><circle class="glowfill" cx="86" cy="32" r="2.4"/><circle class="glowfill" cx="93" cy="24" r="3.2"/><circle class="glowfill" cx="101" cy="15" r="4"/></g>`;
 
-export const ghost = (id: string): string =>
+export const wisp =(id: string): string =>
   `<svg class="ch" viewBox="0 0 120 120" aria-label="Ascua">` +
   `<defs><radialGradient id="${id}-heat" gradientUnits="userSpaceOnUse" cx="60" cy="98" r="44"><stop offset="0" class="c2" stop-opacity="0.55"/><stop offset="1" class="c2" stop-opacity="0"/></radialGradient>` +
   `<linearGradient id="${id}-rim" gradientUnits="userSpaceOnUse" x1="0" y1="12" x2="0" y2="98"><stop offset="0" class="gl" stop-opacity="1"/><stop offset="1" class="gl" stop-opacity="0.35"/></linearGradient></defs>` +
-  `<g class="float"><g class="squash"><g class="ghost-body">${ARMS}${sway("halo")}${sway("body")}${sway("heat", `fill="url(#${id}-heat)"`)}${CORE}${sway("rim", `stroke="url(#${id}-rim)"`)}` +
+  `<g class="float"><g class="squash"><g class="wisp-body">${ARMS}${sway("halo")}${sway("body")}${sway("heat", `fill="url(#${id}-heat)"`)}${CORE}${sway("rim", `stroke="url(#${id}-rim)"`)}` +
   `<g class="look face"><ellipse class="cheek" cx="42.5" cy="72" rx="3.6" ry="2"/><ellipse class="cheek" cx="77.5" cy="72" rx="3.6" ry="2"/>${EYES}${MOUTHS}</g></g>${PROPS}` +
   `<g class="prop p-glitch"><path class="tint tint-l" fill="#f43f5e" d="${BODY}"/><path class="tint tint-r" fill="#22d3ee" d="${BODY}"/></g>` +
-  `</g><g class="embers">${EMBERS}</g></g>${FX}</svg>`;
+  `</g><g>${EMBERS}</g></g>${FX}</svg>`;

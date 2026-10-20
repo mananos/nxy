@@ -20,7 +20,7 @@
 .ch .float, .ch .squash, .ch .look, .ch .arm { transform-box: view-box; }
 .ch .float { will-change: transform; animation: bob 3s ease-in-out infinite; }
 .ch .squash { will-change: transform; transform-origin: 60px 96px; transition: transform 0.45s cubic-bezier(0.3, 1.4, 0.5, 1); }
-.ch .ghost-body { transition: opacity 0.6s; }
+.ch .wisp-body { transition: opacity 0.6s; }
 [data-act="alert"] .halo, [data-act="warn"] .halo, [data-act="ask"] .halo, [data-act="cheer"] .halo { animation: haloPulse 1.2s ease-in-out infinite; }
 
 /* Heat rises from the bottom; the inner flame flickers; sparks leave the tips and go out. */
@@ -90,7 +90,7 @@
 [data-act="yawn"] .squash { animation: yawn 2.4s ease-in-out infinite; }
 [data-act="meditate"] .float { animation: levitate 5s ease-in-out infinite; }
 [data-act="sleep"] .float { animation-duration: 5.5s; }
-[data-act="sleep"] .ghost-body { opacity: 0.6; }
+[data-act="sleep"] .wisp-body { opacity: 0.6; }
 [data-act="code"] .squash { transform: rotate(3deg) translateY(2px); }
 [data-act="read"] .squash { transform: rotate(-2deg); }
 [data-act="think"] .squash { animation: tilt 3s ease-in-out infinite; }
